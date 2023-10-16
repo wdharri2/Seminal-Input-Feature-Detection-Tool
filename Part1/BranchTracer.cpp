@@ -2,9 +2,25 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Instructions.h"
+#include <iostream>
 using namespace llvm;
 
 char BranchTracer::ID = 0;
+
+void addBranchInfo(Instruction *I, BranchInst *BI, std::unordered_map<std::string, std::string> *branchDict)
+{
+    // if there is metadata for the instruction (the branch is executed)
+    if (MDNode *N = I -> getMetadata("dbg")) {
+        DILocation Loc(N);  // DILocation - debugging information
+
+        std::string fileName = Loc.getFileName().str();
+        int line = Loc.getLineNumber();
+        branchDictionary["br_" + std::to_string(BI -> getSuccessor(0) -> getName())] =
+                    fileName + ", " + std::to_string(line);
+        branchDictionary["br_" + std::to_string(BI -> getSuccessor(1) -> getName())] =
+                    fileName + ", " + std::to_string(line);
+    }
+}
 
 bool BranchTracer::runOnFunction(Function &F) 
 {
@@ -19,7 +35,21 @@ bool BranchTracer::runOnFunction(Function &F)
             {
                 if (BI -> isConditional())                                  // Conditional branch
                 {
-                    Value *Condition = BI -> getCondition();  // gets the condition
+                    addBranchInfo(I, BI, branchDict);
+                    // // if there is metadata for the instruction (the branch is executed)
+                    // if (MDNode *N = I -> getMetadata("dbg")) {
+                    //     DILocation Loc(N);  // DILocation - debugging information
+
+                    //     std::string fileName = Loc.getFileName().str();
+                    //     int line = Loc.getLineNumber();
+                    //     branchDictionary["br_" + std::to_string(BI->getSuccessor(0)->getName())] =
+                    //                 fileName + ", " + std::to_string(line);
+                    //     branchDictionary["br_" + std::to_string(BI->getSuccessor(1)->getName())] =
+                    //                 fileName + ", " + std::to_string(line);
+                    // }
+
+
+                    // Value *Condition = BI -> getCondition();  // gets the condition
                 } 
                 else                                                        // Unconditional branch
                 {
@@ -38,7 +68,10 @@ bool BranchTracer::runOnFunction(Function &F)
         }
     }
 
-    // TODO: output branchDict
+    // output branchDict information
+    for (auto &entry : branchDict) {
+        std::cout << entry.first << ": " << entry.second << std::endl;
+    }
 
     return false; // function was not modified
 }
