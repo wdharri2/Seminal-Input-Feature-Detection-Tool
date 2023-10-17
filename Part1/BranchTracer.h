@@ -2,6 +2,7 @@
 #define LLVM_TRANSFORMS_BRANCH_TRACER_H
 
 #include "llvm/BranchTracer.h"
+#include "llvm/Pass.h"
 
 namespace llvm 
 {
