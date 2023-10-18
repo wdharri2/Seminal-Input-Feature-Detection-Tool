@@ -1,84 +1,91 @@
-#include "llvm/BranchTracer.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/Instructions.h"
-#include "llvm/Support/raw_ostream.h"
+#include "BranchTracer.h"
 #include <iostream>
+#include <string>
 #include <fstream>
+#include <unordered_map>
 using namespace llvm;
+
+
+
+/**
+ * reference:
+ * https://llvm.org/docs/WritingAnLLVMPass.html 
+ */ 
+
 
 char BranchTracer::ID = 0;
 
-void writeToOutfile(std::unordered_map<std::string, std::string> *branchDict)
+bool BranchTracer::runOnModule(Module &M) 
+{
+    // branch dictionary: map branch ID to source file and line number
+    std::unordered_map<std::string, std::string> branchDict;
+
+    for (Function &F : M) 
+    {
+        for (BasicBlock &BB : F) 
+        {
+            for (Instruction &I : BB) 
+            {
+                if (BranchInst *BI = dyn_cast<BranchInst>(&I)) 
+                {
+                    if (BI -> isConditional())                                  // Conditional branch
+                    {
+                        addBranchInfo(&I, BI, &branchDict);
+                        // Value *Condition = BI -> getCondition();  // gets the condition
+                    } 
+                    else                                                        // Unconditional branch
+                    {
+                        // addBranchInfo(I, BI, branchDict);
+                    }
+                } 
+                else if (SwitchInst *SI = dyn_cast<SwitchInst>(&I))             // Switch statement
+                {
+                    // addBranchInfo(I, BI, branchDict);
+                } 
+                else if (IndirectBrInst *IBI = dyn_cast<IndirectBrInst>(&I))    // Indirect branch
+                {
+                    // addBranchInfo(I, BI, branchDict);
+                }
+                // more branches?
+            }
+        }
+    }
+
+    writeToOutfile(&branchDict);
+
+    return false; // function was not modified
+}
+
+void BranchTracer::writeToOutfile(std::unordered_map<std::string, std::string> *branchDict)
 {
     std::ofstream TraceFile;
     TraceFile.open("BranchPointerTrace.txt");
     if (!TraceFile.is_open()) 
     {
-        llvm::errs() << "Error: Could not open trace file\n";
+        errs() << "Error: Could not open trace file\n";
         return;
     }
 
        // output branchDict information
-    for (auto &entry : branchDict) {
+    for (auto &entry : *branchDict) {
         TraceFile << entry.first << ": " << entry.second << "\n";
     }
     TraceFile.close();
 }
 
-void addBranchInfo(Instruction *I, BranchInst *BI, std::unordered_map<std::string, std::string> *branchDict)
+void BranchTracer::addBranchInfo(Instruction *I, BranchInst *BI, std::unordered_map<std::string, std::string> *branchDict)
 {
-    // if there is metadata for the instruction (the branch is executed)
-    if (MDNode *N = I -> getMetadata("dbg")) {
-        DILocation Loc(N);  // DILocation - debugging information
+    Instruction *instruction = dyn_cast<Instruction>(I);
+    const DebugLoc &debugInfo = instruction -> getDebugLoc();
 
-        std::string fileName = Loc.getFileName().str();
-        int line = Loc.getLineNumber();
-        branchDictionary["br_" + std::to_string(BI -> getSuccessor(0) -> getName())] =
-                    fileName + ", " + std::to_string(line);
-        branchDictionary["br_" + std::to_string(BI -> getSuccessor(1) -> getName())] =
-                    fileName + ", " + std::to_string(line);
-    }
-}
+    std::string fileName = debugInfo -> getFilename().str();
+    int line = debugInfo -> getLine();
 
-bool BranchTracer::runOnFunction(Function &F) 
-{
-    // branch dictionary: map branch ID to source file and line number
-    std::unordered_map<std::string, std::string> branchDict;
+    std::string branch1 = BI -> getSuccessor(0) -> getName().str();
+    (*branchDict)["br_" + branch1] = fileName + ", " + std::to_string(line);
 
-    for (BasicBlock &BB : F) 
-    {
-        for (Instruction &I : BB) 
-        {
-            if (BranchInst *BI = dyn_cast<BranchInst>(&I)) 
-            {
-                if (BI -> isConditional())                                  // Conditional branch
-                {
-                    addBranchInfo(I, BI, branchDict);
-                    // Value *Condition = BI -> getCondition();  // gets the condition
-                } 
-                else                                                        // Unconditional branch
-                {
-                    // addBranchInfo(I, BI, branchDict);
-                }
-            } 
-            else if (SwitchInst *SI = dyn_cast<SwitchInst>(&I))             // Switch statement
-            {
-                // addBranchInfo(I, BI, branchDict);
-            } 
-            else if (IndirectBrInst *IBI = dyn_cast<IndirectBrInst>(&I))    // Indirect branch
-            {
-                // addBranchInfo(I, BI, branchDict);
-            }
-            // more branches?
-        }
-    }
-
-    writeToOutfile(branchDict)
-
-    return false; // function was not modified
+    std::string branch2 = BI -> getSuccessor(1) -> getName().str();
+    (*branchDict)["br_" + branch2] = fileName + ", " + std::to_string(line);
 }
 
 static RegisterPass<BranchTracer> X("branch-pointer-tracer", "Part1: Branch-Pointer-Tracer");
-// to run with LLVM: 
-// opt -load /Part1/BranchTracer.so -branch-pointer-tracer < input.ll > output.ll
