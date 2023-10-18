@@ -6,8 +6,6 @@
 #include <vector>
 using namespace llvm;
 
-
-
 /**
  * reference:
  * https://llvm.org/docs/WritingAnLLVMPass.html 
@@ -17,7 +15,7 @@ char BranchTracer::ID = 0;
 
 bool BranchTracer::runOnModule(Module &M) 
 {
-    // branch dictionary: map branch ID to source file and line number
+    // branch dictionary: vector to map branch ID to source file and line number
     std::vector<std::pair<std::string, std::string>> branchDict;
 
     for (Function &F : M) 
