@@ -15,7 +15,7 @@
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/PassPlugin.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
-#include <unordered_map>
+#include <map>
 
 namespace llvm 
 {
@@ -27,8 +27,8 @@ namespace llvm
             bool runOnModule(Module &M) override;
 
         private:
-            void addBranchInfo(Instruction *I, BranchInst *BI, std::unordered_map<std::string, std::string> *branchDict);
-            void writeToOutfile(std::unordered_map<std::string, std::string> *branchDict);
+            void addBranchInfo(Instruction *I, BranchInst *BI, std::map<std::string, std::string> *branchDict);
+            void writeToOutfile(std::map<std::string, std::string> *branchDict);
     };
 }
 

@@ -10,7 +10,7 @@ PART 1:
     cmake --build ./
 
 - to compile the target source code file with clang:
-clang -S -emit-llvm ../path/to/inputfile.c -o inputfile.ll
+clang -g -S -emit-llvm ../tests/automaton.c -o automaton.ll
 
 - to build the branch-pointer-tracer pass:
 clang++ -shared -o ../bin/BranchTracer.so ../Part1/BranchTracer.cpp `llvm-config --cxxflags --ldflags --libs` -fPIC
