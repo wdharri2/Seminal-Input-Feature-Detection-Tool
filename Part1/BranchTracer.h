@@ -28,7 +28,7 @@ namespace llvm
 
         private:
             void addBranchInfo(Instruction *I, BranchInst *BI, std::vector<std::pair<std::string, std::string>> *branchDict);
-            void writeToOutfile(std::vector<std::pair<std::string, std::string>> *branchDict);
+            void writeToOutfile(std::string filename, std::vector<std::pair<std::string, std::string>> *branchDict);
     };
 }
 
