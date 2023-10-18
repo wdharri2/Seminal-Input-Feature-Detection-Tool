@@ -16,7 +16,7 @@ PART 1:
 
 - to build the branch-pointer-tracer pass:
 
-`clang++ -shared -o ../bin/BranchTracer.so ../Part1/BranchTracer.cpp ``llvm-config --cxxflags --ldflags --libs\`` -fPIC`
+clang++ -shared -o ../bin/BranchTracer.so ../Part1/BranchTracer.cpp `llvm-config --cxxflags --ldflags --libs` -fPIC
 
 - to run the LLVM on inputfile.ll with the branch-pointer-tracer:
 
