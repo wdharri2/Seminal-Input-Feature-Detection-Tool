@@ -4,16 +4,17 @@ Alex Zettlemoyer, Willie Harris
 PART 1:
 - llvm must be installed and built
     to do so, from the project directory run
-    mkdir build
-    cd build
-    cmake -DCMAKE_BUILD_TYPE=Debug ../llvm-project/llvm
-    cmake --build ./
+
+    - `mkdir build`
+    - `cd build`
+    - `cmake -DCMAKE_BUILD_TYPE=Debug ../llvm-project/llvm`
+    - `cmake --build ./`
 
 - to compile the target source code file with clang:
-clang -g -S -emit-llvm ../tests/example.c -o example.ll
+`clang -g -S -emit-llvm ../tests/example.c -o example.ll`
 
 - to build the branch-pointer-tracer pass:
-clang++ -shared -o ../bin/BranchTracer.so ../Part1/BranchTracer.cpp `llvm-config --cxxflags --ldflags --libs` -fPIC
+`clang++ -shared -o ../bin/BranchTracer.so ../Part1/BranchTracer.cpp `llvm-config --cxxflags --ldflags --libs` -fPIC`
 
 - to run the LLVM on inputfile.ll with the branch-pointer-tracer:
-opt -enable-new-pm=0 -load ../bin/BranchTracer.so -branch-pointer-tracer < example.ll > output.ll
+`opt -enable-new-pm=0 -load ../bin/BranchTracer.so -branch-pointer-tracer < example.ll > output.ll`
