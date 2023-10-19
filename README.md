@@ -10,6 +10,8 @@ PART 1:
     - `cmake -DCMAKE_BUILD_TYPE=Debug ../llvm-project/llvm`
     - `cmake --build ./`
 
+    ** all compilation / run instructions are from the build directory
+
 - to compile the target source code file with clang:
 
 `clang -g -S -emit-llvm ../tests/example.c -o example.ll`
@@ -21,3 +23,9 @@ PART 1:
 - to run the LLVM on inputfile.ll with the branch-pointer-tracer:
 
 `opt -enable-new-pm=0 -load ../bin/BranchTracer.so -branch-pointer-tracer < example.ll > output.ll`
+
+
+- to dynamically run the pass on program example.c
+
+chmod +x trace_branches.sh
+../trace_branches.sh ../tests/example.c

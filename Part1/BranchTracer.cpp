@@ -34,7 +34,7 @@ bool BranchTracer::runOnModule(Module &M)
                 if (BranchInst *BI = dyn_cast<BranchInst>(&I)) 
                 {
                     if (BI -> isConditional())                                  // Conditional branch
-                        addBranchInfo(&I, BI, &branchDict);
+                        addBranchInfo(&I, BI, &branchDict);                        
                 }
             }
         }
@@ -45,11 +45,8 @@ bool BranchTracer::runOnModule(Module &M)
     return false; // module was not modified
 }
 
-
-
 void BranchTracer::writeToOutfile(std::string filename, std::vector<std::pair<std::string, std::string>> *branchDict)
 {
-
     std::string file = filename + "_BPT.txt";
 
     errs() << file << "\n";
@@ -68,6 +65,8 @@ void BranchTracer::writeToOutfile(std::string filename, std::vector<std::pair<st
     TraceFile.close();
 }
 
+
+int id = 0;
 void BranchTracer::addBranchInfo(Instruction *I, BranchInst *BI, std::vector<std::pair<std::string, std::string>> *branchDict)
 {
     Instruction *instruction = dyn_cast<Instruction>(I);
@@ -80,6 +79,7 @@ void BranchTracer::addBranchInfo(Instruction *I, BranchInst *BI, std::vector<std
 
         for (unsigned i = 0; i < BI->getNumSuccessors(); ++i) 
         {
+           // errs() <<  "\t" << i << "\n";
             std::stringstream target;
             target << llvm::sys::path::filename(filename).str();
 
@@ -91,9 +91,8 @@ void BranchTracer::addBranchInfo(Instruction *I, BranchInst *BI, std::vector<std
 
             target << ", " << line << ", " << branchLine;
                 
-            branchDict -> push_back(std::make_pair("br_" + line, target.str()));
+            branchDict -> push_back(std::make_pair("br_" + std::to_string(id++), target.str()));
         }
-
     }   
 }
 
