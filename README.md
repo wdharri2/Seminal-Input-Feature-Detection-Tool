@@ -7,7 +7,7 @@ PART 1:
 
     - `mkdir build`
     - `cd build`
-    - `cmake -DCMAKE_BUILD_TYPE=Debug ../llvm-project/llvm`
+    - `cmake -DCMAKE_BUILD_TYPE=Debug ../llvm`
     - `cmake --build ./`
 
     ** all compilation / run instructions are from the build directory
