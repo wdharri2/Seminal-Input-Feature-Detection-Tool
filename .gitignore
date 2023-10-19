@@ -2,6 +2,7 @@
 build/
 dist/
 *.egg-info/
+llvm/
 
 # Ignore virtual environment
 venv/
@@ -22,9 +23,5 @@ env/
 .DS_Store
 Thumbs.db
 *.o
-# Ignore compiled files without file extension
-*.*
+
 .vscode/*
-# Don't ignore .gitignore
-!.gitignore
-```
