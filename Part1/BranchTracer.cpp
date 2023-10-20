@@ -47,7 +47,7 @@ bool BranchTracer::runOnModule(Module &M)
 
 void BranchTracer::writeToOutfile(std::string filename, std::vector<std::pair<std::string, std::string>> *branchDict)
 {
-    std::string file = filename + "_BPT.txt";
+    std::string file = "../output/" + filename + "_BPT.txt";
 
     errs() << file << "\n";
     std::ofstream TraceFile;
