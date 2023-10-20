@@ -4,9 +4,10 @@
 #include <fstream>
 #include <sstream>
 #include <vector>
+#include "llvm/Support/Path.h"
+#include "llvm/Support/FileSystem.h"
+// #include <llvm/Support/FileSystem.h>
 using namespace llvm;
-
-
 
 /**
  * reference:
@@ -17,8 +18,9 @@ char BranchTracer::ID = 0;
 
 bool BranchTracer::runOnModule(Module &M) 
 {
-    // branch dictionary: map branch ID to source file and line number
+    // branch dictionary: vector to map branch ID to source file and line number
     std::vector<std::pair<std::string, std::string>> branchDict;
+    std::string filename;
 
     for (Function &F : M) 
     {
@@ -26,24 +28,30 @@ bool BranchTracer::runOnModule(Module &M)
         {
             for (Instruction &I : BB) 
             {
+                if (DILocation *DebugLoc = I.getDebugLoc())
+                    filename = DebugLoc -> getFilename().str();
+
                 if (BranchInst *BI = dyn_cast<BranchInst>(&I)) 
                 {
                     if (BI -> isConditional())                                  // Conditional branch
-                        addBranchInfo(&I, BI, &branchDict);
+                        addBranchInfo(&I, BI, &branchDict);                        
                 }
             }
         }
     }
 
-    writeToOutfile(&branchDict);
+    writeToOutfile(llvm::sys::path::filename(filename).str(), &branchDict);
 
     return false; // module was not modified
 }
 
-void BranchTracer::writeToOutfile(std::vector<std::pair<std::string, std::string>> *branchDict)
+void BranchTracer::writeToOutfile(std::string filename, std::vector<std::pair<std::string, std::string>> *branchDict)
 {
+    std::string file = "../output/" + filename + "_BPT.txt";
+
+    errs() << file << "\n";
     std::ofstream TraceFile;
-    TraceFile.open("BranchPointerTrace.txt");
+    TraceFile.open(file);
     if (!TraceFile.is_open()) 
     {
         errs() << "Error: Could not open trace file\n";
@@ -57,6 +65,8 @@ void BranchTracer::writeToOutfile(std::vector<std::pair<std::string, std::string
     TraceFile.close();
 }
 
+
+int id = 0;
 void BranchTracer::addBranchInfo(Instruction *I, BranchInst *BI, std::vector<std::pair<std::string, std::string>> *branchDict)
 {
     Instruction *instruction = dyn_cast<Instruction>(I);
@@ -64,13 +74,14 @@ void BranchTracer::addBranchInfo(Instruction *I, BranchInst *BI, std::vector<std
 
     if (debugInfo)
     {
-        std::string fileName = debugInfo -> getFilename().str();
+        std::string filename = debugInfo -> getFilename().str();
         std::string line = std::to_string(debugInfo -> getLine());
 
         for (unsigned i = 0; i < BI->getNumSuccessors(); ++i) 
         {
+           // errs() <<  "\t" << i << "\n";
             std::stringstream target;
-            target << fileName;
+            target << llvm::sys::path::filename(filename).str();
 
             BasicBlock *successor = BI -> getSuccessor(i);
             Instruction &branchI  = successor -> front();
@@ -80,9 +91,8 @@ void BranchTracer::addBranchInfo(Instruction *I, BranchInst *BI, std::vector<std
 
             target << ", " << line << ", " << branchLine;
                 
-            branchDict -> push_back(std::make_pair("br_" + line, target.str()));
+            branchDict -> push_back(std::make_pair("br_" + std::to_string(id++), target.str()));
         }
-
     }   
 }
 

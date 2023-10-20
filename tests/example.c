@@ -1,4 +1,5 @@
 void fun();
+
 int main() {
     void (*fun_ptr)(int) = &fun;
     (*fun_ptr)(10);
