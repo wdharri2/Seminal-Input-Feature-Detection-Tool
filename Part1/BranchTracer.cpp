@@ -7,6 +7,10 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
 /**
@@ -16,7 +20,10 @@ using namespace llvm;
 
 char BranchTracer::ID = 0;
 int id = 0;
+int functionIndex = 0;
 
+
+// Value* FuncionPointer
 
 /**
  * runOnModule
@@ -28,32 +35,111 @@ int id = 0;
  */
 bool BranchTracer::runOnModule(Module &M) 
 {
-    // branch dictionary: vector to map branch ID to source file and line number
-    std::vector<std::pair<std::string, std::string>> branchDict;
-    // source filename
-    std::string filename;
-
+    LLVMContext& Context = M.getContext();
+    
     for (Function &F : M)               // iterate over all functions in the module
     {
         for (BasicBlock &BB : F)        // iterate over all basic blocks in the function
         {
             for (Instruction &I : BB)   // iterate over all instructions in the basic block
             {
-                if (DILocation *DebugLoc = I.getDebugLoc())     // get the Debug Information for the instruction
-                    filename = DebugLoc -> getFilename().str(); // use the Debug info to get the module filename
-
                 if (BranchInst *BI = dyn_cast<BranchInst>(&I))  // if the instruction is a branch instruction
-                {                                               // TODO: edit to work with all branch instructions
-                    if (BI -> isConditional())                  // if the instruction is a conditional branch
-                        addBranchInfo(&I, BI, &branchDict);     // add the branch information to our dictinoary         
+                {
+                    printExecutedBranchInfo(Context, BI, M);
+                }
+
+                if (CallInst *CI = dyn_cast<CallInst>(&I)) 
+                {
+                    printFunctionPtr(Context, CI, F, M);
                 }
             }
         }
     }
+    return true; // module was modified
+}
 
-    // output out dictionary to the output file
-    writeToOutfile(llvm::sys::path::filename(filename).str(), &branchDict);
-    return false; // module was not modified
+void BranchTracer::printFunctionPtr(LLVMContext &Context, CallInst *CI, Function &F, Module &M)
+{
+    Function* printfFunc = M.getFunction("printf");
+    if (!printfFunc) {
+        // If 'printf' function is not found, declare it.
+        FunctionType* printfFuncType = FunctionType::get(Type::getInt32Ty(Context), true);
+        printfFunc = Function::Create(printfFuncType, Function::ExternalLinkage, "printf", M);
+        printfFunc -> setCallingConv(CallingConv::C);
+    }
+
+    if (Function *calledFunc = CI -> getCalledFunction())
+    {}      // direct function call
+    else    // indirect function call (via function pointer)
+    {
+        IRBuilder<> builder(CI);
+        Value *formatStr = builder.CreateGlobalStringPtr("*func_%p\n");
+        Constant *functionPointer = ConstantExpr::getBitCast(&F, builder.getInt8PtrTy());
+        Value *funcPtrValue = builder.CreatePtrToInt(functionPointer, builder.getInt64Ty());
+
+        std::vector<Value *> args;
+        args.push_back(formatStr);
+        args.push_back(funcPtrValue);
+        builder.CreateCall(printfFunc, args);
+    }
+}
+
+
+void BranchTracer::printExecutedBranchInfo(LLVMContext &Context, Instruction *BI, Module &M)
+{
+    Function* printfFunc = M.getFunction("printf");
+    if (!printfFunc) {
+        // If 'printf' function is not found, declare it.
+        FunctionType* printfFuncType = FunctionType::get(Type::getInt32Ty(Context), true);
+        printfFunc = Function::Create(printfFuncType, Function::ExternalLinkage, "printf", M);
+        printfFunc -> setCallingConv(CallingConv::C);
+    }
+
+    // Get the DebugLoc information from the branch instruction
+    DebugLoc DL = BI -> getDebugLoc();
+    const DebugLoc &debugInfo = BI -> getDebugLoc();
+
+
+    if ( debugInfo ) {
+        std::string filename = debugInfo -> getFilename().str();            // get the filename
+        filename = llvm::sys::path::filename(filename).str();
+        std::string line = std::to_string(debugInfo -> getLine());          // get the branch_statement_line
+        
+        IRBuilder<> builder(BI);
+        Value *formatStr = builder.CreateGlobalStringPtr("br_%d: %s, %s, %s\n");
+        Value *sourceFileName = builder.CreateGlobalStringPtr(filename);
+        Value *lineNumber = builder.CreateGlobalStringPtr(line);        
+
+        for ( unsigned i = 0; i < BI -> getNumSuccessors(); i++ )
+        {
+            BasicBlock *successor = BI -> getSuccessor(i);                  // get the current target
+            Instruction &branchI  = successor -> front();                   // this is the first instruction of that target
+
+            const DebugLoc &branchDebugInfo = branchI.getDebugLoc();        // get the debug info for the target instruction
+            if (branchDebugInfo)
+            {
+                std::string branchLine = std::to_string(branchDebugInfo -> getLine());  // get the line number of the target
+                std::pair<std::string, std::string> thisPair = std::make_pair(line, branchLine);
+
+                if ( !branchDict.count(thisPair) )
+                {   
+                    int thisId = id++;
+                    branchDict.insert(std::make_pair(line, branchLine));
+
+                    Value *branchIdNum = builder.getInt32( thisId );
+                    Value *branchLineNumber = builder.CreateGlobalStringPtr(branchLine);
+
+                    std::vector<Value *> args;
+                    args.push_back(formatStr);
+                    args.push_back(branchIdNum);
+                    args.push_back(sourceFileName);
+                    args.push_back(lineNumber);
+                    args.push_back(branchLineNumber);        
+                    builder.CreateCall(printfFunc, args);
+                }
+            }
+        }
+    }
 }
 
 /**
@@ -67,7 +153,7 @@ bool BranchTracer::runOnModule(Module &M)
  */
 void BranchTracer::writeToOutfile(std::string filename, std::vector<std::pair<std::string, std::string>> *branchDict)
 {
-    std::string file = "../output/" + filename + "_BPT.txt";
+    std::string file = "../output/" + filename + "_BranchDictionary.txt";
 
     std::ofstream OutFile;
     OutFile.open(file);
@@ -115,7 +201,7 @@ void BranchTracer::addBranchInfo(Instruction *I, BranchInst *BI, std::vector<std
 
         // iterate over the branch statements' successors
         // these are all of the possible targets of that branch statement
-        // TODO: edit to only investigate the target that is actually tun
+        // TODO: edit to only investigate the target that is actually run
         for (unsigned i = 0; i < BI->getNumSuccessors(); ++i)
         {
             std::stringstream target;

@@ -1,4 +1,4 @@
-void fun();
+void fun() {}
 
 int main() {
     void (*fun_ptr)(int) = &fun;

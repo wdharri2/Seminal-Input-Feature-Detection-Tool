@@ -24,6 +24,8 @@ clang++ -shared -o ../bin/BranchTracer.so ../Part1/BranchTracer.cpp `llvm-config
 
 `opt -enable-new-pm=0 -load ../bin/BranchTracer.so -branch-pointer-tracer < automaton.ll > output.ll`
 
+clang -o output_binary output.ll
+
 - this will output a Branch Trace txt file to the output folder with the path
 
 `output/automaton.c_BPT.txt`
