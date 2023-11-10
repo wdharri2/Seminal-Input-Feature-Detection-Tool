@@ -1,8 +1,11 @@
 # Ignore build artifacts
 build/
 dist/
+bin/
 *.egg-info/
-
+llvm/
+# Ignore output folder
+output/
 # Ignore virtual environment
 venv/
 env/
@@ -22,9 +25,4 @@ env/
 .DS_Store
 Thumbs.db
 *.o
-# Ignore compiled files without file extension
-*.*
 .vscode/*
-# Don't ignore .gitignore
-!.gitignore
-```

@@ -15,7 +15,7 @@
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/PassPlugin.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
-#include <vector>
+#include <map>
 
 namespace llvm 
 {
@@ -27,8 +27,13 @@ namespace llvm
             bool runOnModule(Module &M) override;
 
         private:
+            std::map<std::string, std::string> branchDict;
+
+            void printFunctionPtr(LLVMContext &Context, CallInst *CI, Function &F, Module &M);
+            void printExecutedBranchInfo(LLVMContext &Context, BranchInst *BI, Module &M);
+
             void addBranchInfo(Instruction *I, BranchInst *BI, std::vector<std::pair<std::string, std::string>> *branchDict);
-            void writeToOutfile(std::vector<std::pair<std::string, std::string>> *branchDict);
+            void writeToOutfile(std::string filename);
     };
 }
 
