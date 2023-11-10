@@ -22,5 +22,14 @@ clang++ -shared -o ../bin/BranchTracer.so ../Part1/BranchTracer.cpp `llvm-config
 
 - to run the LLVM on inputfile.ll with the branch-pointer-tracer:
 
-`opt -enable-new-pm=0 -load ../bin/BranchTracer.so -branch-pointer-tracer < example.ll > output.ll`
+`opt -enable-new-pm=0 -load ../bin/BranchTracer.so -branch-pointer-tracer < example.ll > transformed_example.ll`
+
+- you may have to grant yourself permission to run the transformed output file
+
+`chmod +x transformed_example.ll`
+`./transformed_example.ll`
+
+- this will output a Branch Dictionary txt file to the output folder with the path
+
+`output/example.c_BranchDictionary.txt`
 
