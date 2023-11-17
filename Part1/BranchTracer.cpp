@@ -23,8 +23,6 @@ char BranchTracer::ID = 0;
 int id = 0;
 int functionIndex = 0;
 
-// Value* FuncionPointer
-
 /**
  * runOnModule
  * overrides the ModulePass class' function
@@ -47,16 +45,14 @@ bool BranchTracer::runOnModule(Module &M)
                 if ( filename.empty())
                 {
                     const DebugLoc &debugInfo = I.getDebugLoc();
-                    filename = debugInfo -> getFilename().str();            // get the filename
+                    filename = debugInfo -> getFilename().str();        // get the filename
                 }
 
-                if (BranchInst *BI = dyn_cast<BranchInst>(&I))  // if the instruction is a branch instruction
-                {
-                    if ( BI -> isConditional() )
+                if (BranchInst *BI = dyn_cast<BranchInst>(&I))          // if the instruction is a branch instruction
+                    if ( BI -> isConditional() )                        // and a conditional branch
                         printExecutedBranchInfo(Context, BI, M);
-                }
 
-                if (CallInst *CI = dyn_cast<CallInst>(&I)) 
+                if (CallInst *CI = dyn_cast<CallInst>(&I))              // if the instruction is a call instruction
                     printFunctionPtr(Context, CI, F, M);
             }
         }
