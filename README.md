@@ -4,6 +4,9 @@ Alex Zettlemoyer, Willie Harris
 PART 1:
 
 To run the profiling tool, LLVM must be installed and built.
+	To install LLVM clone the following repository
+	- https://github.com/llvm-mirror/llvm
+
     To do so, from the project directory run
 
     - `mkdir build`
