@@ -1,14 +1,25 @@
 #include "InputFeatureDetector.h"
+#include <iostream>
+#include <string>
+#include <fstream>
+#include <sstream>
+#include <vector>
+#include "llvm/Support/Path.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/Support/raw_ostream.h"
 
 // Pass ID variable  
 char InputFeatureDetector::ID = 0;
 
 // Run analysis on module
 // This is almost identical to the part 1 code. TODO consolidate this and part 1 code
-bool InputFeatureDetector::runOnModule(Module &M) {
-    // branch dictionary: vector to map branch ID to source file and line number
-    std::vector<std::pair<std::string, std::string>> branchDict;
-    // source filename
+bool InputFeatureDetector::runOnModule(Module &M) 
+{
+    LLVMContext& Context = M.getContext();
     std::string filename;
 
     for (Function &F : M)               // iterate over all functions in the module
@@ -17,21 +28,26 @@ bool InputFeatureDetector::runOnModule(Module &M) {
         {
             for (Instruction &I : BB)   // iterate over all instructions in the basic block
             {
-                if (DILocation *DebugLoc = I.getDebugLoc())     // get the Debug Information for the instruction
-                    filename = DebugLoc -> getFilename().str(); // use the Debug info to get the module filename
-
-                if (BranchInst *BI = dyn_cast<BranchInst>(&I))  // if the instruction is a branch instruction
-                {                                               // TODO: edit to work with all branch instructions
-                    if (BI -> isConditional())                  // if the instruction is a conditional branch
-                        detectFeatures(&I, BI, &branchDict);     // detect seminal input features and add the branch information to dictionary     
+                if ( filename.empty())
+                {
+                    const DebugLoc &debugInfo = I.getDebugLoc();
+                    filename = debugInfo -> getFilename().str();        // get the filename
                 }
+
+                if (BranchInst *BI = dyn_cast<BranchInst>(&I))          // if the instruction is a branch instruction
+                    if ( BI -> isConditional() )                        // and a conditional branch
+                        // printExecutedBranchInfo(Context, BI, M);
+                        detectBranch(Context, BI, M);
+
+                if (CallInst *CI = dyn_cast<CallInst>(&I))              // if the instruction is a call instruction
+                    // printFunctionPtr(Context, CI, F, M);
+                    detectCall(Context, CI, F, M);
             }
         }
     }
 
-    // output out dictionary to the output file
-    //writeToOutfile(llvm::sys::path::filename(filename).str(), &branchDict);
-    return false; // module was not modified
+    writeToOutfile(llvm::sys::path::filename(filename).str());
+    return true; // module was modified
 }
 
 /*
@@ -54,13 +70,21 @@ void InputFeatureDetector::writeToOutfile(std::string filename, std::vector<std:
   
 }
 
-// Detect input features influencing key points  
-void InputFeatureDetector::detectFeatures(Instruction *Inst, BranchInst *branchInst, std::vector<std::pair<std::string, std::string>> *branchDict)
+// Detect input features influencing key points for branch instructions 
+void InputFeatureDetector::detectBranch(LLVMContext& Context, BranchInst *BI, Module &M)
 {
 
-  // TODO:
-  // Perform def-use analysis
-  //    Determine input features affecting them
-  // Append newfound info to branchDict
+    // print branch instruction to stdin for now to test
+    err() << "Branch Instruction: " << *BI << "\n";
+    std::cout << "Branch Instruction: " << *BI << "\n";
+    //exit program
+    exit(0);
+
+
+}
+
+// Detect input features influencing key points for call instructions
+void InputFeatureDetector::detectCall(LLVMContext& Context, CallInst *CI, Function &F, Module &M)
+{
 
 }

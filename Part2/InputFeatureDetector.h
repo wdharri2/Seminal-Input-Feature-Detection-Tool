@@ -7,13 +7,19 @@
 #define INPUT_FEATURE_DETECTOR_H
 
 #include "llvm/Pass.h"
-#include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/Analysis/AliasAnalysis.h"
-#include <utility>
-#include <string>
-#include <vector>
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/PassManager.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/PassRegistry.h"
+#include "llvm/Passes/PassBuilder.h"
+#include "llvm/Passes/PassPlugin.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
+#include <map>
 
 using namespace llvm;
 
@@ -30,7 +36,7 @@ namespace {
     bool runOnModule(Module &M) override; 
     
     // Write output to file
-    void writeOutput(std::string filename);
+    void writeToOutfile(std::vector<std::pair<std::string, std::string>> *branchDict);
 
   private:
 
@@ -40,8 +46,11 @@ namespace {
     // Branch info from BranchTracer
     std::vector<std::pair<std::string, std::string>> BranchDict;
 
-    // Detect input features
-    void detectFeatures(Module *M);
+    // Detect branch features
+    void detectBranch(LLVMContext& Context, BranchInst *BI, Module &M);
+
+    // Detect call features
+    void detectCall(LLVMContext& Context, CallInst *CI, Function &F, Module &M);
 
   };
 
