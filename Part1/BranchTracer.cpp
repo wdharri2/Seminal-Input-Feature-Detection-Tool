@@ -117,6 +117,9 @@ void BranchTracer::printFunctionPtr(LLVMContext &Context, CallInst *CI, Function
     else    // indirect function call (via function pointer)
     {
         IRBuilder<> builder(CI);
+        if (++CI -> getIterator() != CI->getParent()->end()) {
+            builder.SetInsertPoint(CI->getParent(), ++CI->getIterator());
+        }
         Value *formatStr = builder.CreateGlobalStringPtr("*func_%p\n");
         Constant *functionPointer = ConstantExpr::getBitCast(&F, builder.getInt8PtrTy());
         Value *funcPtrValue = builder.CreatePtrToInt(functionPointer, builder.getInt64Ty());
@@ -150,6 +153,7 @@ void BranchTracer::printExecutedBranchInfo(LLVMContext &Context, BranchInst *BI,
         printfFunc -> setCallingConv(CallingConv::C);
     }
 
+
     // Get the DebugLoc information from the branch instruction
     const DebugLoc &debugInfo = BI -> getDebugLoc();
 
@@ -170,6 +174,10 @@ void BranchTracer::printExecutedBranchInfo(LLVMContext &Context, BranchInst *BI,
             {
                 IRBuilder<> builder(&targetI);                              // create an IR builder for the target instruction
                 Value *formatStr = builder.CreateGlobalStringPtr("br_%d: %s, %s\n");    // setup the string formatter
+
+                if (++targetI.getIterator() != targetI.getParent()->end()) {
+                    builder.SetInsertPoint(targetI.getParent(), ++targetI.getIterator());
+                }
 
                 std::string branchLine = std::to_string(branchDebugInfo -> getLine());  // get the line number of the target
                 int thisId = branchDict.size();

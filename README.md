@@ -23,6 +23,24 @@ To run the profiling tool, LLVM must be installed and built.
 ***** the LLVM build must be in a directory titled `build` in the project directory
 
 _______
+TESTING FILES:
+
+* 2 small C programs (any of the files in /test) **TODO**
+
+* real-world substitute to SPEC CPU: driver.c
+    - driver.c is part of a C program implemented in CSC230
+    - the program acts as a custom command prompt interface
+    - this interface manages a custom implemented C map, which the user can manipulate through the command prompt
+    - the map only works for <integer, integer> key-value pairs
+    - usage:
+        `set key value`:    store a new key-value pair in the map
+        `get key`:          get the value of a key
+        `remove key`:       remove a key-value pair from the map
+        `size`:             get the current size of the map
+        `quit`:             quit the command prompt
+
+
+_______
 PART 1:
 
 Run the script branch_tracer.sh for the full profiling tool
