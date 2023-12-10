@@ -84,9 +84,9 @@ Map *makeMap( int len )
     m -> size = 0;
 
     m -> table = (Node **) malloc( len * sizeof( Node *));
-    for ( int i = 0; i < len; i++ )
+    for ( int i = 0; i < len; i++ ) {
         (m -> table)[ i ] = NULL;
-    
+    }
     m -> size = 0;
     m -> tlen = len;
   
@@ -108,13 +108,15 @@ void mapAdd( Map *m, VType *key, VType *val )
     node -> value = val;
     node -> next = NULL;
     
-    if ( !( m -> table )[ index ])
-        ( m -> table)[ index ] = node; 
+    if ( !( m -> table )[ index ]) {
+        ( m -> table)[ index ] = node;
+    } 
     else {
         Node *current = ( m -> table )[ index ];
         
-        while ( current -> next )
+        while ( current -> next ) {
             current = current -> next;
+        }
         current -> next = node;
     }
     m -> size++;
@@ -129,9 +131,9 @@ void mapResize( Map *m )
     m -> table = ( Node ** ) malloc( m -> tlen * sizeof( Node *));
     m -> size = 0;
     
-    for ( int i = 0; i < m -> tlen; i++ )
+    for ( int i = 0; i < m -> tlen; i++ ) {
         (m -> table)[ i ] = NULL;
-    
+    }
     for ( int i = 0; i < oldLength; i++ ) {
         Node *current = oldTable[ i ];
         
@@ -155,8 +157,9 @@ void mapSet( Map *m, VType *key, VType *val )
     node -> value = val;
     node -> next = NULL;
         
-    if ( !( m -> table )[ index ])
-        ( m -> table)[ index ] = node; 
+    if ( !( m -> table )[ index ]) {
+        ( m -> table)[ index ] = node;
+    } 
     else {
         Node *current = ( m -> table )[ index ];
         
@@ -170,16 +173,18 @@ void mapSet( Map *m, VType *key, VType *val )
                 return;
             }
             
-            if ( !(current -> next) )
+            if ( !(current -> next) ) {
                 break;
+            }
             current = current -> next;
         }
 
         current -> next = node;
     }
     (*m).size ++;
-    if ( (*m).size == (*m).tlen )
+    if ( (*m).size == (*m).tlen ) {
         mapResize( m );
+    }
 }
 
 VType *mapGet( Map *m, VType *key )
@@ -187,15 +192,16 @@ VType *mapGet( Map *m, VType *key )
     unsigned int hash = key -> hash( key );
     int index = hash % (*m).tlen;
     
-    if ( !( m -> table )[ index ] )
+    if ( !( m -> table )[ index ] ) {
         return NULL;
+    }
     else {
         Node *current = ( m -> table )[ index ];
         
         while ( current ) {
-            if ( current -> key -> equals( current -> key, key ))
+            if ( current -> key -> equals( current -> key, key )) {
                 return current -> value;
-            
+            }
             current = current -> next;
         }
     }
@@ -215,8 +221,9 @@ bool mapRemove( Map *m, VType *key )
     unsigned int hash = key -> hash( key );
     int index = hash % (*m).tlen;
     
-    if ( !( m -> table)[ index ] )
+    if ( !( m -> table)[ index ] ) {
         return false;
+    }
     else {
         Node *current = ( m -> table )[ index ];
         
@@ -293,16 +300,17 @@ static void printVType( struct VTypeStruct const *v )
             }
             escape = false;
         }
-        else 
+        else {
             printf("%c", this -> str[ i ]);
+        }
     }
 }
 
 static bool equalsVType( struct VTypeStruct const *a, struct VTypeStruct const *b )
 {
-    if ( b -> print != printVType )
+    if ( b -> print != printVType ) {
         return false;
-
+    }
     Text const *this = ( Text const *) a;
     Text const *other = ( Text const *) b;
 
@@ -342,8 +350,9 @@ VType *parseText( char const *init, int *n )
     int size = INITIAL_CAPACTIY;
     char ch = '\0';
         
-    if ( sscanf( init, "%c", &ch) != 1 )
+    if ( sscanf( init, "%c", &ch) != 1 ) {
         return NULL;
+    }
     
     Text *this = (Text *) malloc( sizeof( Text ) );
     this -> str = (char *) malloc( INITIAL_CAPACTIY * sizeof(char));
@@ -358,26 +367,29 @@ VType *parseText( char const *init, int *n )
             this -> str = (char *) realloc( this -> str, size * sizeof( char *));
         }
     
-        if ( ch == '\\' )
+        if ( ch == '\\' ) {
             escape = true;
+        }
         if ( !escape && ch == '\"' && quote ) {
             this -> str [ count++ ] = ch;
             len++;
             break;
         }
-        else if ( ch == '\"' && !quote )
+        else if ( ch == '\"' && !quote ) {
             quote = true;
+        }
         
-        if ( quote )
+        if ( quote ) {
             this -> str [ count++ ] = ch;
+        }
         len++;
     }
     
     this -> str[ count ] = '\0';
     
-    if ( n )
+    if ( n ) {
         *n = len;
-  
+    }
     this -> length = count;
     this -> print = printVType;
     this -> equals = equalsVType;
@@ -396,9 +408,9 @@ static void print( VType const *v )
 
 static bool equals( VType const *a, VType const *b )
 {
-    if ( b->print != print )
+    if ( b->print != print ) {
         return false;
-
+    }
     Integer const *this = (Integer const *) a;
     Integer const *that = (Integer const *) b;
 
@@ -424,9 +436,9 @@ VType *parseInteger( char const *init, int *n )
         return NULL;
     }
 
-    if ( n )
+    if ( n ) {
         *n = len;
-  
+    }
     Integer *this = (Integer *) malloc( sizeof( Integer ) );
     this->val = val;
     this->print = print;
@@ -441,19 +453,20 @@ static VType *parseVType( char const *init, int *n )
 {
   VType *val = parseInteger( init, n );
 
-  if ( ! val )
+  if ( ! val ) {
     val = parseText( init, n );
-  
+  }
   return val;
 }
 
 static bool blankString( char *str )
 {
-  while ( isspace( *str ) )
+  while ( isspace( *str ) ) {
     ++str;
-
-  if ( *str )
+  }
+  if ( *str ) {
     return false;
+  }
   return true;
 }
 
@@ -528,8 +541,9 @@ int main()
       }
     }
 
-    if ( ! valid )
+    if ( ! valid ) {
       printf( "Invalid command\n" );
+    }
 
     free( line );
     printf( "\ncmd> " );

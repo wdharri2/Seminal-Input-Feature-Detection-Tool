@@ -32,6 +32,7 @@ TESTING FILES:
     - the program acts as a custom command prompt interface
     - this interface manages a custom implemented C map, which the user can manipulate through the command prompt
     - the map only works for <integer, integer> key-value pairs
+    - the source file has 554 lines of non-comment source code
     - usage:
         - `set key value`: store a new key-value pair in the map
         - `get key`:          get the value of a key
