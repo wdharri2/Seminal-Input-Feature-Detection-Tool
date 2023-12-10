@@ -25,34 +25,43 @@ using namespace llvm;
 
 namespace {
 
-  class InputFeatureDetector : public ModulePass {
+    class InputFeatureDetector : public ModulePass {
 
-  public:
-    // Pass identification
-    static char ID;
-    InputFeatureDetector() : ModulePass(ID) {}
+        public:
+            // Pass identification
+            static char ID;
+            InputFeatureDetector() : ModulePass(ID) {}
 
-    // Main analysis function
-    bool runOnModule(Module &M) override; 
-    
-    // Write output to file
-    void writeToOutfile(std::string filename/*, std::vector<std::pair<std::string, std::string>> *branchDict*/);
+            // Main analysis function
+            bool runOnModule(Module &M) override; 
+            
+            // Write output to file
+            void writeToOutfile(std::string filename/*, std::vector<std::pair<std::string, std::string>> *branchDict*/);
 
-  private:
+        private:
 
-    // Analysis state
-    std::set<Value*> InputFeatures;
+            // Analysis state
+            std::set<Value*> InputFeatures;
 
-    // Branch info from BranchTracer
-    std::vector<std::pair<std::string, std::string>> BranchDict;
+            // Branch info from BranchTracer
+            std::vector<std::pair<std::string, std::string>> BranchDict;
 
-    // Detect branch features
-    void detectBranch(LLVMContext& Context, BranchInst *BI, Module &M);
+            // Detect branch features
+            void detectBranch(LLVMContext& Context, BranchInst *BI, Module &M);
 
-    // Detect call features
-    void detectCall(LLVMContext& Context, CallInst *CI, Function &F, Module &M);
+            // Determine loop bound
+            Value* determineLoopBound(LLVMContext &Context, BranchInst *BI, Module &M, Value *leftOperand, Value *rightOperand);
 
-  };
+            // Determine loop counter
+            bool isOperandLoopCounter(Loop *loop, Value *operand);
+
+            // Detect call features
+            void detectCall(LLVMContext& Context, CallInst *CI, Function &F, Module &M);
+
+            void processOperand(Value *operand);
+
+            Value* traceToSource(Instruction* inst);
+        };
 
 }  
 

@@ -155,7 +155,7 @@ void InputFeatureDetector::detectBranch(LLVMContext& Context, BranchInst *BI, Mo
             }
         }
     } else if (isa<CallInst>(condition)) { // condition is a call instruction, FIXME: may remove this in case runOnModule() already can detect this. e.g. while(foo())
-        detectCall(Context, dyn_cast<CallInst>(condition), *BI->getParent()->getParent(), M);
+        //detectCall(Context, dyn_cast<CallInst>(condition), *BI->getParent(), M);
     } else { // condition evaluates to a value which is processed as either true or false 
        return;
     }
@@ -165,7 +165,7 @@ void InputFeatureDetector::detectBranch(LLVMContext& Context, BranchInst *BI, Mo
     //TODO: Find more conditions that need to be analyzed
 }
 
-Value* determineLoopBound(LLVMContext &Context, BranchInst *BI, Module &M, Value *leftOperand, Value *rightOperand) {
+Value* InputFeatureDetector::determineLoopBound(LLVMContext &Context, BranchInst *BI, Module &M, Value *leftOperand, Value *rightOperand) {
     // First, determine if BI is part of a loop.
     LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
     Loop *loop = LI.getLoopFor(BI->getParent());
@@ -186,7 +186,7 @@ Value* determineLoopBound(LLVMContext &Context, BranchInst *BI, Module &M, Value
     return nullptr;
 }
 
-bool isOperandLoopCounter(Loop *loop, Value *operand) {
+bool InputFeatureDetector::isOperandLoopCounter(Loop *loop, Value *operand) {
         // Ensure that the loop and operand are valid
     if (!loop || !operand) return false;
 
@@ -213,30 +213,42 @@ bool isOperandLoopCounter(Loop *loop, Value *operand) {
 }
 
 void InputFeatureDetector::processOperand(Value *operand) {
+    // Check if operand is valid
+    if (!operand) return;
 
-    
-    // Check if the operand is a constant int
-    if (auto *constantInt = dyn_cast<ConstantInt>(operand)) {
-        int value = constantInt->getSExtValue();
-        
-        // Print out the constant value
-        errs() << "Input value: " << value << "\n";
+    std::string operandName;
+    unsigned line = 0;
 
-    } else if (auto *inst = dyn_cast<Instruction>(operand)) {
-        // Operand is an instruction
-
-        // Trace back to the source 
-        Value* source = traceToSource(inst);
-
-        if (source) {
-            // Found source instruction, print it out
-            errs() << "Input variable: " << *source << "\n";
+    // Handle different types of operands
+    if (auto *arg = dyn_cast<Argument>(operand)) {
+        operandName = arg->getName().str();
+    } else if (auto *constVal = dyn_cast<Constant>(operand)) {
+        if (constVal->hasName()) {
+            operandName = constVal->getName().str();
         }
+    } else if (auto *inst = dyn_cast<Instruction>(operand)) {
+        if (inst->hasName()) {
+            operandName = inst->getName().str();
+        }
+        if (const DebugLoc &debugLoc = inst->getDebugLoc()) {
+            line = debugLoc->getLine();
+        }
+    }
+
+    // // If the operand is a LoadInst, use LoopInfo for loop analysis (optional)
+    // if (auto *loadInst = dyn_cast<LoadInst>(operand)) {
+    //     LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
+    //     // Further analysis can be done here
+    // }
+
+    // Output information
+    if (!operandName.empty() && line != 0) {
+        errs() << "Line " << line << ": " << operandName << "\n";
     }
 }
 
 // Recursively trace instruction to source
-Value* traceToSource(Instruction* inst) {
+Value* InputFeatureDetector::traceToSource(Instruction* inst) {
     if (inst && (isa<Argument>(inst) || isa<CallInst>(inst))) {
         return inst;
     }
