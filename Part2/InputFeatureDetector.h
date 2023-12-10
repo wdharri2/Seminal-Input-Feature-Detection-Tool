@@ -36,7 +36,7 @@ namespace {
     bool runOnModule(Module &M) override; 
     
     // Write output to file
-    void writeToOutfile(std::vector<std::pair<std::string, std::string>> *branchDict);
+    void writeToOutfile(std::string filename/*, std::vector<std::pair<std::string, std::string>> *branchDict*/);
 
   private:
 
