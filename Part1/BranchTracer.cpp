@@ -42,7 +42,7 @@ bool BranchTracer::runOnModule(Module &M)
         {
             for (Instruction &I : BB)   // iterate over all instructions in the basic block
             {
-                if ( filename.empty())
+                if ( filename.empty() && I.getDebugLoc())
                 {
                     const DebugLoc &debugInfo = I.getDebugLoc();
                     filename = debugInfo -> getFilename().str();        // get the filename
@@ -150,6 +150,8 @@ void BranchTracer::printExecutedBranchInfo(LLVMContext &Context, BranchInst *BI,
         printfFunc -> setCallingConv(CallingConv::C);
     }
 
+    // errs() << "Here1\n";
+
     // Get the DebugLoc information from the branch instruction
     const DebugLoc &debugInfo = BI -> getDebugLoc();
 
@@ -164,7 +166,11 @@ void BranchTracer::printExecutedBranchInfo(LLVMContext &Context, BranchInst *BI,
             BasicBlock *successor = BI -> getSuccessor(i);                  // get the current target
             Instruction &targetI  = successor -> front();                   // this is the first instruction of that target
 
+                // errs() << "Here2\n";
+
+
             const DebugLoc &branchDebugInfo = targetI.getDebugLoc();        // get the debug info for the target instruction
+            
             if (branchDebugInfo)
             {
                 IRBuilder<> builder(&targetI);                              // create an IR builder for the target instruction

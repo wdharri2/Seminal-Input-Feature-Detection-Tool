@@ -13,6 +13,13 @@ To run the profiling tool, LLVM must be installed and built.
     - `cmake -DCMAKE_BUILD_TYPE=Debug ../llvm`
     - `cmake --build ./`
 
+* This program requires the installation of clang, llvm, gcc, and valgrind
+
+    - `sudo apt install clang`
+    - `sudo apt install llvm`
+    - `sudo apt install gcc`
+    - `sudo apt install valgrind`
+
 ***** the LLVM build must be in a directory titled `build` in the project directory
 
 _______

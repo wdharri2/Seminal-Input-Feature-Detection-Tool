@@ -14,7 +14,7 @@ cd build
 
 # Step 1: Generate LLVM IR from the C file
 echo -e "Generating LLVM IR for ${C_FILE_PATH}"
-clang -g -S -emit-llvm "../$C_FILE_PATH" -o "../bin/${file}.ll"
+clang -O0 -g -S -emit-llvm "../$C_FILE_PATH" -o "../bin/${file}.ll"
 
 # Step 2: Compile BranchTracer.cpp to a shared object
 echo -e "Compiling BranchTracer.cpp"
@@ -39,6 +39,7 @@ gcc "$C_FILE_PATH" -o "bin/${file}"
 
 # Step 7: Run Valgrind callgrind tool
 echo -e "Running callgrind on /bin/${file}"
-valgrind_output=$(valgrind --tool=callgrind --callgrind-out-file=/dev/null ./bin/${file} {@:2} 2>&1)
-collected_number=$(echo "$valgrind_output" | grep -oE '^==[0-9]+== Collected : [0-9]+' | awk '{print $4}')
-echo "Number of executed instructions (via valgrind callgrind): $collected_number"
+valgrind --tool=callgrind --callgrind-out-file=/dev/null ./bin/${file} {@:2} 2>&1
+# valgrind_output=$(valgrind --tool=callgrind --callgrind-out-file=/dev/null ./bin/${file} {@:2} 2>&1)
+# collected_number=$(echo "$valgrind_output" | grep -oE '^==[0-9]+== Collected : [0-9]+' | awk '{print $4}')
+# echo "Number of executed instructions (via valgrind callgrind): $collected_number"
