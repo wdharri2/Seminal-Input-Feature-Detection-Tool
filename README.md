@@ -33,11 +33,11 @@ TESTING FILES:
     - this interface manages a custom implemented C map, which the user can manipulate through the command prompt
     - the map only works for <integer, integer> key-value pairs
     - usage:
-        `set key value`:    store a new key-value pair in the map
-        `get key`:          get the value of a key
-        `remove key`:       remove a key-value pair from the map
-        `size`:             get the current size of the map
-        `quit`:             quit the command prompt
+        - `set key value`: store a new key-value pair in the map
+        - `get key`:          get the value of a key
+        - `remove key`:       remove a key-value pair from the map
+        - `size`:             get the current size of the map
+        - `quit`:             quit the command prompt
 
 
 _______
