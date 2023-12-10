@@ -150,8 +150,6 @@ void BranchTracer::printExecutedBranchInfo(LLVMContext &Context, BranchInst *BI,
         printfFunc -> setCallingConv(CallingConv::C);
     }
 
-    // errs() << "Here1\n";
-
     // Get the DebugLoc information from the branch instruction
     const DebugLoc &debugInfo = BI -> getDebugLoc();
 
@@ -165,9 +163,6 @@ void BranchTracer::printExecutedBranchInfo(LLVMContext &Context, BranchInst *BI,
         {
             BasicBlock *successor = BI -> getSuccessor(i);                  // get the current target
             Instruction &targetI  = successor -> front();                   // this is the first instruction of that target
-
-                // errs() << "Here2\n";
-
 
             const DebugLoc &branchDebugInfo = targetI.getDebugLoc();        // get the debug info for the target instruction
             

@@ -38,8 +38,7 @@ echo -e "\n\bcompiling original C file to /bin/${file}"
 gcc "$C_FILE_PATH" -o "bin/${file}"
 
 # Step 7: Run Valgrind callgrind tool
-echo -e "Running callgrind on /bin/${file}"
-valgrind --tool=callgrind --callgrind-out-file=/dev/null ./bin/${file} {@:2} 2>&1
-# valgrind_output=$(valgrind --tool=callgrind --callgrind-out-file=/dev/null ./bin/${file} {@:2} 2>&1)
-# collected_number=$(echo "$valgrind_output" | grep -oE '^==[0-9]+== Collected : [0-9]+' | awk '{print $4}')
-# echo "Number of executed instructions (via valgrind callgrind): $collected_number"
+echo -e "Running /bin/${file} with callgrind\n"
+valgrind --tool=callgrind --callgrind-out-file=callgrind_output.txt ./bin/${file} {@:2} 2> >(grep -E '^==.*callgrind.*==' | tee callgrind_output.txt >&2)
+collected_number=$(grep -oE 'totals: [0-9]+' callgrind_output.txt | awk '{print $NF}')
+echo -e "\nNumber of executed instructions (via callgrind_output.txt): $collected_number"
