@@ -4,7 +4,8 @@ dist/
 bin/
 *.egg-info/
 llvm/
-
+# Ignore output folder
+output/
 # Ignore virtual environment
 venv/
 env/
@@ -24,5 +25,4 @@ env/
 .DS_Store
 Thumbs.db
 *.o
-
 .vscode/*
