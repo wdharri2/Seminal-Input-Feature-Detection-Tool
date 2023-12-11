@@ -23,8 +23,6 @@ char BranchTracer::ID = 0;
 int id = 0;
 int functionIndex = 0;
 
-// Value* FuncionPointer
-
 /**
  * runOnModule
  * overrides the ModulePass class' function
@@ -44,19 +42,17 @@ bool BranchTracer::runOnModule(Module &M)
         {
             for (Instruction &I : BB)   // iterate over all instructions in the basic block
             {
-                if ( filename.empty())
+                if ( filename.empty() && I.getDebugLoc())
                 {
                     const DebugLoc &debugInfo = I.getDebugLoc();
-                    filename = debugInfo -> getFilename().str();            // get the filename
+                    filename = debugInfo -> getFilename().str();        // get the filename
                 }
 
-                if (BranchInst *BI = dyn_cast<BranchInst>(&I))  // if the instruction is a branch instruction
-                {
-                    if ( BI -> isConditional() )
+                if (BranchInst *BI = dyn_cast<BranchInst>(&I))          // if the instruction is a branch instruction
+                    if ( BI -> isConditional() )                        // and a conditional branch
                         printExecutedBranchInfo(Context, BI, M);
-                }
 
-                if (CallInst *CI = dyn_cast<CallInst>(&I)) 
+                if (CallInst *CI = dyn_cast<CallInst>(&I))              // if the instruction is a call instruction
                     printFunctionPtr(Context, CI, F, M);
             }
         }
@@ -121,6 +117,9 @@ void BranchTracer::printFunctionPtr(LLVMContext &Context, CallInst *CI, Function
     else    // indirect function call (via function pointer)
     {
         IRBuilder<> builder(CI);
+        if (++CI -> getIterator() != CI->getParent()->end()) {
+            builder.SetInsertPoint(CI->getParent(), ++CI->getIterator());
+        }
         Value *formatStr = builder.CreateGlobalStringPtr("*func_%p\n");
         Constant *functionPointer = ConstantExpr::getBitCast(&F, builder.getInt8PtrTy());
         Value *funcPtrValue = builder.CreatePtrToInt(functionPointer, builder.getInt64Ty());
@@ -154,6 +153,7 @@ void BranchTracer::printExecutedBranchInfo(LLVMContext &Context, BranchInst *BI,
         printfFunc -> setCallingConv(CallingConv::C);
     }
 
+
     // Get the DebugLoc information from the branch instruction
     const DebugLoc &debugInfo = BI -> getDebugLoc();
 
@@ -169,10 +169,15 @@ void BranchTracer::printExecutedBranchInfo(LLVMContext &Context, BranchInst *BI,
             Instruction &targetI  = successor -> front();                   // this is the first instruction of that target
 
             const DebugLoc &branchDebugInfo = targetI.getDebugLoc();        // get the debug info for the target instruction
+            
             if (branchDebugInfo)
             {
                 IRBuilder<> builder(&targetI);                              // create an IR builder for the target instruction
                 Value *formatStr = builder.CreateGlobalStringPtr("br_%d: %s, %s\n");    // setup the string formatter
+
+                if (++targetI.getIterator() != targetI.getParent()->end()) {
+                    builder.SetInsertPoint(targetI.getParent(), ++targetI.getIterator());
+                }
 
                 std::string branchLine = std::to_string(branchDebugInfo -> getLine());  // get the line number of the target
                 int thisId = branchDict.size();
