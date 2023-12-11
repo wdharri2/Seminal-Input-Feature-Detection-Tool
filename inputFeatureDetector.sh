@@ -22,23 +22,4 @@ clang++ -shared -o ../bin/InputFeatureDetector.so ../Part2/InputFeatureDetector.
 
 # Step 3: Transform LLVM IR using InputFeatureDetector.so
 echo -e "\nTransforming ${C_FILE_PATH} to /bin/${file}.ll"
-opt -enable-new-pm=0 -load ../bin/InputFeatureDetector.so -branch-pointer-tracer < "../bin/${file}.ll" > "../bin/transformed_${file}.ll"
-
-cd ../
-
-# Step 4: Make the transformed file executable
-chmod +x "bin/transformed_${file}.ll"
-
-# Step 5: Execute the transformed file
-echo -e "\nRunning the transformed file: ./bin/transformed_${file}.ll"
-"./bin/transformed_${file}.ll"
-
-# Step 6: Compile the original C file
-echo -e "\n\bcompiling original C file to /bin/${file}"
-gcc "$C_FILE_PATH" -o "bin/${file}"
-
-# Step 7: Run Valgrind callgrind tool
-# echo -e "Running callgrind on /bin/${file}"
-# valgrind_output=$(valgrind --tool=callgrind --callgrind-out-file=/dev/null ./bin/${file} {@:2} 2>&1)
-# collected_number=$(echo "$valgrind_output" | grep -oE '^==[0-9]+== Collected : [0-9]+' | awk '{print $4}')
-# echo "Number of executed instructions (via valgrind callgrind): $collected_number"
+opt -enable-new-pm=0 -load ../bin/InputFeatureDetector.so -input-pointer-tracer < "../bin/${file}.ll" > "../bin/transformed_${file}.ll"

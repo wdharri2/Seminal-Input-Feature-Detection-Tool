@@ -19,7 +19,16 @@
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/PassPlugin.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include <map>
+#include <fstream>
+#include <string>
+#include <stdexcept>
+#include <algorithm>
+#include <cctype>
+#include <regex>
+#include <iostream>
+
 
 using namespace llvm;
 
@@ -32,28 +41,21 @@ namespace {
             static char ID;
             InputFeatureDetector() : ModulePass(ID) {}
 
+            // void getAnalysisUsage(AnalysisUsage &AU) const override {
+            //     AU.addRequired<LoopInfoWrapperPass>();
+            // } 
+            void getAnalysisUsage(AnalysisUsage &AU) const override;
+
             // Main analysis function
             bool runOnModule(Module &M) override; 
-            
-            // Write output to file
-            void writeToOutfile(std::string filename/*, std::vector<std::pair<std::string, std::string>> *branchDict*/);
 
         private:
-
+    
             // Analysis state
             std::set<Value*> InputFeatures;
 
-            // Branch info from BranchTracer
-            std::vector<std::pair<std::string, std::string>> BranchDict;
-
             // Detect branch features
-            void detectBranch(LLVMContext& Context, BranchInst *BI, Module &M);
-
-            // Determine loop bound
-            Value* determineLoopBound(LLVMContext &Context, BranchInst *BI, Module &M, Value *leftOperand, Value *rightOperand);
-
-            // Determine loop counter
-            bool isOperandLoopCounter(Loop *loop, Value *operand);
+            void detectBranch(BranchInst *BI);
 
             // Detect call features
             void detectCall(LLVMContext& Context, CallInst *CI, Function &F, Module &M);
@@ -61,6 +63,14 @@ namespace {
             void processOperand(Value *operand);
 
             Value* traceToSource(Instruction* inst);
+
+            std::string getLineFromFile(int lineNumber, const std::string& filename);
+            
+            bool startsWithControlStructure(const std::string& line);
+
+            std::string trim(const std::string& str);
+
+            std::string extractVariableName(const std::string& line);
         };
 
 }  

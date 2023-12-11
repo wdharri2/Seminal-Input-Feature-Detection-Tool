@@ -43,6 +43,7 @@ The output of the tool should indicate what the seminal input features are for t
 
 // Pass ID variable  
 char InputFeatureDetector::ID = 0;
+
 /*
 Method: A possible way to solve the problem is to use def-use relations to infer what part of the input is 
 related with the key points in the program that determine the execution time of a program. 
@@ -62,17 +63,18 @@ bool InputFeatureDetector::runOnModule(Module &M)
         {
             for (Instruction &I : BB)   // iterate over all instructions in the basic block
             {
-                if ( filename.empty())
+                if ( filename.empty() && I.getDebugLoc())
                 {
                     const DebugLoc &debugInfo = I.getDebugLoc();
                     filename = debugInfo -> getFilename().str();        // get the filename
                 }
-
-                if (BranchInst *BI = dyn_cast<BranchInst>(&I))          // if the instruction is a branch instruction
-                    if ( BI -> isConditional() )                        // and a conditional branch
+                if (BranchInst *BI = dyn_cast<BranchInst>(&I)){          // if the instruction is a branch instruction
+                    if ( BI -> isConditional() ){                        // and a conditional branch
                         // printExecutedBranchInfo(Context, BI, M);
-                        detectBranch(Context, BI, M);
-
+                        // errs() << "Branch instruction " + std::to_string(BI->getDebugLoc().getLine()) << "\n";
+                        detectBranch(BI);
+                    }
+                }
                 if (CallInst *CI = dyn_cast<CallInst>(&I))              // if the instruction is a call instruction
                     // printFunctionPtr(Context, CI, F, M);
                     detectCall(Context, CI, F, M);
@@ -80,7 +82,7 @@ bool InputFeatureDetector::runOnModule(Module &M)
         }
     }
 
-    writeToOutfile(llvm::sys::path::filename(filename).str());
+    // writeToOutfile(llvm::sys::path::filename(filename).str());
     return true; // module was modified
 }
 
@@ -102,23 +104,29 @@ Hint, to deal with the more complicated cases like the second example,
 it may be necessary to make the compiler take advantage of the semantics of the I/O APIs 
 by hardcoding the semantics of the relevant APIs inside your compiler-based analysis.
 */
-// Write output to file
-void InputFeatureDetector::writeToOutfile(std::string filename/*, std::vector<std::pair<std::string, std::string>> *branchDict*/) {
-
-  // TODO: Implement output writing
-  
-}
 
 // Detect input features influencing key points for branch instructions 
-void InputFeatureDetector::detectBranch(LLVMContext& Context, BranchInst *BI, Module &M)
+void InputFeatureDetector::detectBranch(BranchInst *BI)
 {
 // Ensure that the branch instruction is conditional
-    if (!BI->isConditional()) {
+    if (!BI->isConditional()){
         return;
     }
 
-    // Get the condition of the branch
+     // Get the condition of the branch
     Value *condition = BI->getCondition();
+
+    // if branch instruction is an if-else statement runtime is dependent on BasicBlock successors
+    // check if the branch instruction is an if-else statement
+    std::string line = getLineFromFile(BI->getDebugLoc().getLine(), BI->getDebugLoc()->getFilename().str());
+    if(startsWithControlStructure(line)){
+        errs() << "Line " << BI->getDebugLoc().getLine() << ": if-else branch length of `";
+        //remove leading and trailing whitespace from line
+        std::string lineNoWhitespace = trim(line);
+
+        errs() << lineNoWhitespace << "`\n";
+        return;
+    }
 
     // Analyze the condition
     if (ICmpInst *cmp = dyn_cast<ICmpInst>(condition)) {
@@ -128,28 +136,67 @@ void InputFeatureDetector::detectBranch(LLVMContext& Context, BranchInst *BI, Mo
         Value *leftOperand = cmp->getOperand(0);
         Value *rightOperand = cmp->getOperand(1);
 
+        // Check if the comparison is an equality comparison becuase if it is then the condition is processed differently
+        if(cmp->getPredicate() == CmpInst::Predicate::ICMP_EQ) {
+            // Get the operands of the comparison
+            errs() << "Line " << cmp->getDebugLoc().getLine() << ": ";
+            leftOperand->printAsOperand(errs(), false, nullptr);
+            errs() << " == ";
+            rightOperand->printAsOperand(errs(), false, nullptr);
+            errs() << "\n";
+            return;
+        }
+
         // Process the operands to find seminal input features
         if (isa<Constant>(leftOperand) || isa<Constant>(rightOperand)) {
             // Constants take highest precedence
             if (isa<Constant>(leftOperand)) {
-                processOperand(leftOperand); 
+                errs() << "Line " << cmp->getDebugLoc().getLine() << ": ";
+                leftOperand->printAsOperand(errs(), false, nullptr);
+                errs() << "\n";
             } else {
-                processOperand(rightOperand);
+                errs() << "Line " << cmp->getDebugLoc().getLine() << ": ";
+                rightOperand->printAsOperand(errs(), false, nullptr);
+                errs() << "\n";
             }
         } else if (isa<Argument>(leftOperand) || isa<Argument>(rightOperand)) {
             if (isa<Argument>(leftOperand)) {
-                processOperand(leftOperand);
+                errs() << "Line " << cmp->getDebugLoc().getLine() << ": ";
+                leftOperand->printAsOperand(errs(), false, nullptr);
+                errs() << "\n";
             } else {
-                processOperand(rightOperand);
+                errs() << "Line " << cmp->getDebugLoc().getLine() << ": ";
+                rightOperand->printAsOperand(errs(), false, nullptr);
+                errs() << "\n";
             }
         } else if(isa<CallInst>(leftOperand) || isa<CallInst>(rightOperand) || isa<LoadInst>(leftOperand) || isa<LoadInst>(rightOperand)) {
             if (isa<CallInst>(leftOperand) && isa<LoadInst>(rightOperand)) { // left operand is seminal input i = 0; foo() > i; i++
-                processOperand(leftOperand);
+                errs() << "Line " << cmp->getDebugLoc().getLine() << ": ";
+                leftOperand->printAsOperand(errs(), false, nullptr);
+                errs() << "\n";
             } else if (isa<CallInst>(rightOperand) && isa<LoadInst>(leftOperand)) { // right operand is seminal input i = 0; i < foo(); i++
-                processOperand(rightOperand);
+                errs() << "Line " << cmp->getDebugLoc().getLine() << ": ";
+                rightOperand->printAsOperand(errs(), false, nullptr);
+                errs() << "\n";
             } else if(isa<LoadInst>(leftOperand) && isa<LoadInst>(rightOperand)){ // both operands are variables i = 0; i < n; i++
-                Value *seminalInput = determineLoopBound(Context, BI, M, leftOperand, rightOperand); // determine which operand is the loop counter(seminal input)
-                processOperand(seminalInput);
+                // auto *leftLoad = dyn_cast<LoadInst>(leftOperand);
+                // auto *rightLoad = dyn_cast<LoadInst>(rightOperand);
+                // if(leftLoad->getNumUses() == 1 || rightLoad->getNumUses() == 1) {
+                //     if(leftLoad->getNumUses() == 1) {
+                //         errs() << "Line " << cmp->getDebugLoc().getLine() << ": ";
+                //         leftOperand->printAsOperand(errs(), false, nullptr);
+                errs() << "\n";
+                //     } else {
+                //         errs() << "Line " << cmp->getDebugLoc().getLine() << ": ";
+                //         rightOperand->printAsOperand(errs(), false, nullptr);
+                errs() << "\n";
+                //     }
+                // } else {
+                //     errs() << "Line " << cmp->getDebugLoc().getLine() << ": ";
+
+                // } 
+                errs() << "Line " << cmp->getDebugLoc().getLine() << ": ";
+                errs() << "TODO: implement this case\n";
             } else { // condition is not processed here
                 return;
             }
@@ -165,88 +212,6 @@ void InputFeatureDetector::detectBranch(LLVMContext& Context, BranchInst *BI, Mo
     //TODO: Find more conditions that need to be analyzed
 }
 
-Value* InputFeatureDetector::determineLoopBound(LLVMContext &Context, BranchInst *BI, Module &M, Value *leftOperand, Value *rightOperand) {
-    // First, determine if BI is part of a loop.
-    LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-    Loop *loop = LI.getLoopFor(BI->getParent());
-    if (!loop) return nullptr; // Not part of a loop.
-
-    // Check if either operand is a loop counter.
-    bool leftIsCounter = isOperandLoopCounter(loop, leftOperand);
-    bool rightIsCounter = isOperandLoopCounter(loop, rightOperand);
-
-    // The operand that is not the counter is likely the loop bound.
-    if (leftIsCounter && !rightIsCounter) {
-        return rightOperand;
-    } else if (!leftIsCounter && rightIsCounter) {
-        return leftOperand;
-    }
-
-    // In case both or neither are counters, additional analysis may be required.
-    return nullptr;
-}
-
-bool InputFeatureDetector::isOperandLoopCounter(Loop *loop, Value *operand) {
-        // Ensure that the loop and operand are valid
-    if (!loop || !operand) return false;
-
-    // Iterate over all blocks in the loop
-    for (BasicBlock *BB : loop->getBlocks()) {
-        // Iterate over all instructions in the block
-        for (Instruction &I : *BB) {
-            // Check for instructions that could modify the operand (e.g., Add, Sub)
-            if (auto *binOp = dyn_cast<BinaryOperator>(&I)) {
-                // Check if the binary operation modifies the operand
-                if ((binOp->getOpcode() == Instruction::Add || binOp->getOpcode() == Instruction::Sub) &&
-                    (binOp->getOperand(0) == operand || binOp->getOperand(1) == operand)) {
-                    // Check if the other operand is a constant (typical of loop counters)
-                    Value *otherOperand = (binOp->getOperand(0) == operand) ? binOp->getOperand(1) : binOp->getOperand(0);
-                    if (isa<ConstantInt>(otherOperand)) {
-                        return true; // Operand is modified by a constant amount, typical of a loop counter
-                    }
-                }
-            }
-        }
-    }
-
-    return false; // Operand is not modified as a loop counter
-}
-
-void InputFeatureDetector::processOperand(Value *operand) {
-    // Check if operand is valid
-    if (!operand) return;
-
-    std::string operandName;
-    unsigned line = 0;
-
-    // Handle different types of operands
-    if (auto *arg = dyn_cast<Argument>(operand)) {
-        operandName = arg->getName().str();
-    } else if (auto *constVal = dyn_cast<Constant>(operand)) {
-        if (constVal->hasName()) {
-            operandName = constVal->getName().str();
-        }
-    } else if (auto *inst = dyn_cast<Instruction>(operand)) {
-        if (inst->hasName()) {
-            operandName = inst->getName().str();
-        }
-        if (const DebugLoc &debugLoc = inst->getDebugLoc()) {
-            line = debugLoc->getLine();
-        }
-    }
-
-    // // If the operand is a LoadInst, use LoopInfo for loop analysis (optional)
-    // if (auto *loadInst = dyn_cast<LoadInst>(operand)) {
-    //     LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
-    //     // Further analysis can be done here
-    // }
-
-    // Output information
-    if (!operandName.empty() && line != 0) {
-        errs() << "Line " << line << ": " << operandName << "\n";
-    }
-}
-
 // Recursively trace instruction to source
 Value* InputFeatureDetector::traceToSource(Instruction* inst) {
     if (inst && (isa<Argument>(inst) || isa<CallInst>(inst))) {
@@ -259,9 +224,100 @@ Value* InputFeatureDetector::traceToSource(Instruction* inst) {
 }
 
 // Detect input features influencing key points for call instructions
-void InputFeatureDetector::detectCall(LLVMContext& Context, CallInst *CI, Function &F, Module &M)
-{
+void InputFeatureDetector::detectCall(LLVMContext& Context, CallInst *CI, Function &F, Module &M) {
 
+    Function* calledFunc = CI->getCalledFunction(); 
+
+    if (!calledFunc) {
+        // Indirect call, not handled for now
+        return;
+    }
+
+    // Check if it's a file I/O call
+    if (calledFunc->getName() == "fopen" || calledFunc->getName() == "open") {
+
+        // fopen/open defines the file to be processed
+
+        Value* filenameParam = CI->getArgOperand(0); 
+
+        std::string line = getLineFromFile(CI->getDebugLoc().getLine(), CI->getDebugLoc()->getFilename().str());
+        std::string variableName = extractVariableName(line);
+
+        // Filename is a global constant string
+        errs() << "Line " << CI->getDebugLoc().getLine() << ": " << "Length of file " << variableName << "\n";
+
+
+    } 
+}
+
+void InputFeatureDetector::getAnalysisUsage(AnalysisUsage &AU) const {
+    AU.addRequired<LoopInfoWrapperPass>();
+}
+
+std::string InputFeatureDetector::getLineFromFile(int lineNumber, const std::string& filename) {
+    std::ifstream file(filename);
+    if (!file.is_open()) {
+        return "";
+    }
+
+    std::string line;
+    for (int i = 0; i < lineNumber; ++i) {
+        if (!getline(file, line)) {
+            return "";
+        }
+    }
+
+    return line;
+}
+
+bool InputFeatureDetector::startsWithControlStructure(const std::string& line) {
+    // Lambda to check if a character is not a whitespace or closing bracket
+    auto not_space_or_bracket = [](char ch) {
+        return !std::isspace(static_cast<unsigned char>(ch)) && ch != '}';
+    };
+
+    // Find the first non-whitespace and non-closing bracket character
+    auto first_char = std::find_if(line.begin(), line.end(), not_space_or_bracket);
+
+    // Check if string starts with specific control structures
+    if (std::distance(line.begin(), first_char) <= line.size()) {
+        if (line.compare(std::distance(line.begin(), first_char), 2, "if") == 0) {
+            return true;
+        }
+        if (line.compare(std::distance(line.begin(), first_char), 7, "else if") == 0) {
+            return true;
+        }
+        if (line.compare(std::distance(line.begin(), first_char), 4, "else") == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+
+std::string InputFeatureDetector::trim(const std::string& str) {
+    auto start = std::find_if(str.begin(), str.end(), [](unsigned char ch) {
+        return !std::isspace(ch);
+    });
+    auto end = std::find_if(str.rbegin(), str.rend(), [](unsigned char ch) {
+        return !std::isspace(ch);
+    }).base();
+
+    return (start < end) ? std::string(start, end) : "";
+}
+
+std::string InputFeatureDetector::extractVariableName(const std::string& line) {
+    std::regex pattern(R"(\bFILE\s*\*\s*(\w+)\s*=|^\s*\*\s*(\w+)\s*=)");
+    std::smatch matches;
+
+    if (std::regex_search(line, matches, pattern)) {
+        for (size_t i = 1; i < matches.size(); ++i) {
+            if (!matches[i].str().empty()) {
+                return matches[i];
+            }
+        }
+    }
+    return "";
 }
 
 // this registers the branch-pointer-tracer pass with the LLVM
