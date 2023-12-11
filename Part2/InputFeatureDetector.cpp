@@ -51,7 +51,6 @@ For C programs, those points include branching points
 (including if-else, switch, loop condition checks, and so on), and function pointers
 */
 // Run analysis on module
-// This is almost identical to the part 1 code. TODO consolidate this and part 1 code
 bool InputFeatureDetector::runOnModule(Module &M) 
 {
     LLVMContext& Context = M.getContext();
@@ -179,24 +178,10 @@ void InputFeatureDetector::detectBranch(BranchInst *BI)
                 rightOperand->printAsOperand(errs(), false, nullptr);
                 errs() << "\n";
             } else if(isa<LoadInst>(leftOperand) && isa<LoadInst>(rightOperand)){ // both operands are variables i = 0; i < n; i++
-                // auto *leftLoad = dyn_cast<LoadInst>(leftOperand);
-                // auto *rightLoad = dyn_cast<LoadInst>(rightOperand);
-                // if(leftLoad->getNumUses() == 1 || rightLoad->getNumUses() == 1) {
-                //     if(leftLoad->getNumUses() == 1) {
-                //         errs() << "Line " << cmp->getDebugLoc().getLine() << ": ";
-                //         leftOperand->printAsOperand(errs(), false, nullptr);
-                errs() << "\n";
-                //     } else {
-                //         errs() << "Line " << cmp->getDebugLoc().getLine() << ": ";
-                //         rightOperand->printAsOperand(errs(), false, nullptr);
-                errs() << "\n";
-                //     }
-                // } else {
-                //     errs() << "Line " << cmp->getDebugLoc().getLine() << ": ";
-
-                // } 
+                std::string leftOperandLine = getLineFromFile(dyn_cast<Instruction>(leftOperand)->getDebugLoc().getLine(), dyn_cast<Instruction>(leftOperand)->getDebugLoc()->getFilename().str());                BasicBlock *BB = BI->getSuccessor(0);
+                auto operands = parseCondition(leftOperandLine);
                 errs() << "Line " << cmp->getDebugLoc().getLine() << ": ";
-                errs() << "TODO: implement this case\n";
+                errs() << operands[0] << "compared to " << operands[1] << "\n";
             } else { // condition is not processed here
                 return;
             }
@@ -209,7 +194,6 @@ void InputFeatureDetector::detectBranch(BranchInst *BI)
 
     // Additional checks and analyses might be needed for more complex conditions
     // For example, conditions involving function calls, arithmetic operations, etc.
-    //TODO: Find more conditions that need to be analyzed
 }
 
 // Recursively trace instruction to source
@@ -247,7 +231,9 @@ void InputFeatureDetector::detectCall(LLVMContext& Context, CallInst *CI, Functi
         errs() << "Line " << CI->getDebugLoc().getLine() << ": " << "Length of file " << variableName << "\n";
 
 
-    } 
+    } else if(calledFunc->getName() == "gets" || calledFunc->getName() == "getc") { // Line 3: size of stdin
+        errs() << "Line " << CI->getDebugLoc().getLine() << ": Size of stdin\n";
+    }
 }
 
 void InputFeatureDetector::getAnalysisUsage(AnalysisUsage &AU) const {
@@ -318,6 +304,19 @@ std::string InputFeatureDetector::extractVariableName(const std::string& line) {
         }
     }
     return "";
+}
+
+std::vector<std::string> InputFeatureDetector::parseCondition(const std::string& str) {
+    std::regex pattern(R"(\(([^,]+)\s*(<|<=|==|!=|>=|>)\s*([^,]+)\))");
+    std::smatch matches;
+    std::vector<std::string> operands;
+
+    if (std::regex_search(str, matches, pattern) && matches.size() >= 4) {
+        operands.push_back(matches[1].str()); // Left operand
+        operands.push_back(matches[3].str()); // Right operand
+    }
+
+    return operands;
 }
 
 // this registers the branch-pointer-tracer pass with the LLVM

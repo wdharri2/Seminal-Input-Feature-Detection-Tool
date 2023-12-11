@@ -28,6 +28,7 @@
 #include <cctype>
 #include <regex>
 #include <iostream>
+#include <vector>
 
 
 using namespace llvm;
@@ -71,6 +72,8 @@ namespace {
             std::string trim(const std::string& str);
 
             std::string extractVariableName(const std::string& line);
+
+            std::vector<std::string> parseCondition(const std::string& str);
         };
 
 }  
