@@ -32,7 +32,8 @@ TESTING FILES:
     - the program acts as a custom command prompt interface
     - this interface manages a custom implemented C map, which the user can manipulate through the command prompt
     - the map only works for <integer, integer> key-value pairs
-    - the source file has 554 lines of non-comment source code
+    - the source file has 527 lines of non-comment, non-blank source code lines
+        - use `cat tests/driver.c | sed '/^\s*$/d' | wc -l` to see the number
     - usage:
         - `set key value`: store a new key-value pair in the map
         - `get key`:          get the value of a key

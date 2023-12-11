@@ -470,85 +470,158 @@ static bool blankString( char *str )
   return true;
 }
 
+void mapDisplay(Map *m) {
+    for (int i = 0; i < m->tlen; ++i) {
+        Node *current = m->table[i];
+        while (current) {
+            current->key->print(current->key);
+            printf(" -> ");
+            current->value->print(current->value);
+            printf("\n");
+            current = current->next;
+        }
+    }
+}
+void mapClear(Map *m) {
+    for (int i = 0; i < m->tlen; ++i) {
+        Node *current = m->table[i];
+        while (current) {
+            Node *temp = current;
+            current = current->next;
+            freeNode(temp);
+        }
+        m->table[i] = NULL;
+    }
+    free(m->table);  // Free the table array itself
+    m->table = (Node **)malloc(INITIAL_CAPACTIY * sizeof(Node *)); // Reallocate the table
+    for (int i = 0; i < INITIAL_CAPACTIY; ++i) {
+        m->table[i] = NULL;
+    }
+    m->size = 0;
+    m->tlen = INITIAL_CAPACTIY;
+}
+bool mapContainsKey(Map *m, VType *key) {
+    unsigned int hash = key->hash(key);
+    int index = hash % m->tlen;
+
+    if (!(m->table)[index]) {
+        return false;
+    } else {
+        Node *current = (m->table)[index];
+
+        while (current) {
+            if (current->key->equals(current->key, key)) {
+                return true;
+            }
+            current = current->next;
+        }
+    }
+    return false;
+}
 int main()
 {
-  Map *map = makeMap( INITIAL_CAPACTIY );
+    Map *map = makeMap( INITIAL_CAPACTIY );
 
-  char *line;
-  printf( "cmd> " );
-  while ( ( line = readLine( stdin ) ) ) {
-  
-    printf( "%s\n", line );
+    char *line;
+    printf( "cmd> " );
+    while ( ( line = readLine( stdin ) ) ) {
+    
+        printf( "%s\n", line );
 
-    bool valid = false;
-    char cmd[ MAX_CMD + 1 ];
-    int n;
-    if ( sscanf( line, "%10s%n", cmd, &n ) == 1 ) {
-      char *pos = line + n;
-      if ( strcmp( cmd, "get" ) == 0 ) {
-        VType *k = parseVType( pos, &n );
-        if ( k ) {
-          pos += n;
+        bool valid = false;
+        char cmd[ MAX_CMD + 1 ];
+        int n;
+        if ( sscanf( line, "%10s%n", cmd, &n ) == 1 ) {
+            char *pos = line + n;
+            if ( strcmp( cmd, "get" ) == 0 ) {
+                VType *k = parseVType( pos, &n );
+                if ( k ) {
+                    pos += n;
 
-          if ( blankString( pos ) ) {
-            valid = true;
-            VType *v = mapGet( map, k );
-            if ( v ) {
-              v->print( v );
-              printf( "\n" );
-            } else
-              printf( "Undefined\n" );
-          }
+                    if ( blankString( pos ) ) {
+                        valid = true;
+                        VType *v = mapGet( map, k );
+                        if ( v ) {
+                        v->print( v );
+                        printf( "\n" );
+                        } else
+                        printf( "Undefined\n" );
+                    }
 
-          k->destroy( k );
-        }
-      } else if ( strcmp( cmd, "set") == 0 ) {
-        VType *k = parseVType( pos, &n );
-        
-        if ( k ) {
-            pos += n;
-            VType *v = parseVType( pos, &n );
+                    k->destroy( k );
+                }
+            }
+            else if ( strcmp( cmd, "set") == 0 ) {
+                VType *k = parseVType( pos, &n );
+                
+                if ( k ) {
+                    pos += n;
+                    VType *v = parseVType( pos, &n );
+                    
+                    if ( v ) {
+                        pos += n;
+                        valid = true;
+                        mapSet( map, k, v );
+                    }
+                }
+            } 
+            else if ( strcmp( cmd, "remove") == 0 ) {
             
-            if ( v ) {
-                pos += n;
-                valid = true;
-                mapSet( map, k, v );
+                VType *k = parseVType( pos, &n );
+                if ( k ) {
+                    pos += n;
+
+                    if ( blankString( pos ) ) {
+                        valid = true;
+                        
+                        if ( !mapRemove( map, k ) ) {
+                            printf("Not in map\n");    
+                        }
+                    }
+                    k->destroy( k );
+                }
+            }
+            else if ( strcmp( cmd, "size" ) == 0 ) {
+                if ( blankString( pos ) ) {
+                    valid = true;
+                    printf( "%d\n", mapSize( map ) );
+                }
+            }
+            else if (strcmp(cmd, "display") == 0) {
+                if (blankString(pos)) {
+                    valid = true;
+                    mapDisplay(map);
+                }
+            }
+            else if (strcmp(cmd, "contains") == 0) {
+                VType *k = parseVType(pos, &n);
+                if (k) {
+                    pos += n;
+                    if (blankString(pos)) {
+                        valid = true;
+                        if (mapContainsKey(map, k)) {
+                            printf("True.\n");
+                        } else {
+                            printf("Map does not contain ");
+                            k -> print(k);
+                        }
+                        k->destroy(k);
+                    }
+                }
+            }
+            else if ( strcmp( cmd, "quit" ) == 0 ) {
+                free( line );
+                freeMap( map );
+                exit( EXIT_SUCCESS );
             }
         }
-      } else if ( strcmp( cmd, "remove") == 0 ) {
-      
-        VType *k = parseVType( pos, &n );
-        if ( k ) {
-          pos += n;
+        if ( ! valid ) {
+            printf( "Invalid command\n" );
+        }
 
-          if ( blankString( pos ) ) {
-            valid = true;
-            
-            if ( !mapRemove( map, k ) )
-                printf("Not in map\n");
-          }
-          k->destroy( k );
-        }
-      } else if ( strcmp( cmd, "size" ) == 0 ) {
-        if ( blankString( pos ) ) {
-          valid = true;
-          printf( "%d\n", mapSize( map ) );
-        }
-      } else if ( strcmp( cmd, "quit" ) == 0 ) {
         free( line );
-        freeMap( map );
-        exit( EXIT_SUCCESS );
-      }
+        printf( "\ncmd> " );
     }
-
-    if ( ! valid ) {
-      printf( "Invalid command\n" );
-    }
-
-    free( line );
-    printf( "\ncmd> " );
-  }
-
-  freeMap( map );
-  return EXIT_SUCCESS;
+    freeMap( map );
+    return EXIT_SUCCESS;
 }
