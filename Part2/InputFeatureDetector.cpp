@@ -127,6 +127,13 @@ void InputFeatureDetector::detectBranch(BranchInst *BI)
         return;
     }
 
+    if(!isa<ICmpInst>(condition)){
+        errs() << "Line " << BI->getDebugLoc().getLine() << ": ";
+        std::string line = getLineFromFile(BI->getDebugLoc().getLine(), BI->getDebugLoc()->getFilename().str());
+        std::string condition = extractBetweenParentheses(line);
+        errs() << condition << "\n";
+        return;
+    }
     // Analyze the condition
     if (ICmpInst *cmp = dyn_cast<ICmpInst>(condition)) {
         // The condition is a comparison instruction
@@ -134,14 +141,14 @@ void InputFeatureDetector::detectBranch(BranchInst *BI)
         // Get the operands of the comparison
         Value *leftOperand = cmp->getOperand(0);
         Value *rightOperand = cmp->getOperand(1);
-
+    
         // Check if the comparison is an equality comparison becuase if it is then the condition is processed differently
         if(cmp->getPredicate() == CmpInst::Predicate::ICMP_EQ) {
             // Get the operands of the comparison
             errs() << "Line " << cmp->getDebugLoc().getLine() << ": ";
-            leftOperand->printAsOperand(errs(), false, nullptr);
+            leftOperand->printAsOperand(errs(), false, BI->getModule());
             errs() << " == ";
-            rightOperand->printAsOperand(errs(), false, nullptr);
+            rightOperand->printAsOperand(errs(), false, BI->getModule());
             errs() << "\n";
             return;
         }
@@ -151,37 +158,37 @@ void InputFeatureDetector::detectBranch(BranchInst *BI)
             // Constants take highest precedence
             if (isa<Constant>(leftOperand)) {
                 errs() << "Line " << cmp->getDebugLoc().getLine() << ": ";
-                leftOperand->printAsOperand(errs(), false, nullptr);
+                leftOperand->printAsOperand(errs(), false, BI->getModule());
                 errs() << "\n";
             } else {
                 errs() << "Line " << cmp->getDebugLoc().getLine() << ": ";
-                rightOperand->printAsOperand(errs(), false, nullptr);
+                rightOperand->printAsOperand(errs(), false, BI->getModule());
                 errs() << "\n";
             }
         } else if (isa<Argument>(leftOperand) || isa<Argument>(rightOperand)) {
             if (isa<Argument>(leftOperand)) {
                 errs() << "Line " << cmp->getDebugLoc().getLine() << ": ";
-                leftOperand->printAsOperand(errs(), false, nullptr);
+                leftOperand->printAsOperand(errs(), false, BI->getModule());
                 errs() << "\n";
             } else {
                 errs() << "Line " << cmp->getDebugLoc().getLine() << ": ";
-                rightOperand->printAsOperand(errs(), false, nullptr);
+                rightOperand->printAsOperand(errs(), false, BI->getModule());
                 errs() << "\n";
             }
         } else if(isa<CallInst>(leftOperand) || isa<CallInst>(rightOperand) || isa<LoadInst>(leftOperand) || isa<LoadInst>(rightOperand)) {
             if (isa<CallInst>(leftOperand) && isa<LoadInst>(rightOperand)) { // left operand is seminal input i = 0; foo() > i; i++
                 errs() << "Line " << cmp->getDebugLoc().getLine() << ": ";
-                leftOperand->printAsOperand(errs(), false, nullptr);
+                leftOperand->printAsOperand(errs(), false, BI->getModule());
                 errs() << "\n";
             } else if (isa<CallInst>(rightOperand) && isa<LoadInst>(leftOperand)) { // right operand is seminal input i = 0; i < foo(); i++
                 errs() << "Line " << cmp->getDebugLoc().getLine() << ": ";
-                rightOperand->printAsOperand(errs(), false, nullptr);
+                rightOperand->printAsOperand(errs(), false, BI->getModule());
                 errs() << "\n";
             } else if(isa<LoadInst>(leftOperand) && isa<LoadInst>(rightOperand)){ // both operands are variables i = 0; i < n; i++
                 std::string leftOperandLine = getLineFromFile(dyn_cast<Instruction>(leftOperand)->getDebugLoc().getLine(), dyn_cast<Instruction>(leftOperand)->getDebugLoc()->getFilename().str());                BasicBlock *BB = BI->getSuccessor(0);
                 auto operands = parseCondition(leftOperandLine);
                 errs() << "Line " << cmp->getDebugLoc().getLine() << ": ";
-                errs() << operands[0] << "compared to " << operands[1] << "\n";
+                errs() << operands[0] << " compared to " << operands[1] << "\n";
             } else { // condition is not processed here
                 return;
             }
@@ -306,17 +313,38 @@ std::string InputFeatureDetector::extractVariableName(const std::string& line) {
     return "";
 }
 
+std::string InputFeatureDetector::tr(const std::string& str) {
+    size_t first = str.find_first_not_of(' ');
+    if (first == std::string::npos) return "";
+
+    size_t last = str.find_last_not_of(' ');
+    return str.substr(first, (last - first + 1));
+}
+
 std::vector<std::string> InputFeatureDetector::parseCondition(const std::string& str) {
-    std::regex pattern(R"(\(([^,]+)\s*(<|<=|==|!=|>=|>)\s*([^,]+)\))");
+    std::regex pattern(R"(\((?:[^;]*;)?\s*([^,;]+)\s*(<|<=|==|!=|>=|>)\s*([^,;]+?)\s*;[^)]*\))");
     std::smatch matches;
     std::vector<std::string> operands;
 
     if (std::regex_search(str, matches, pattern) && matches.size() >= 4) {
-        operands.push_back(matches[1].str()); // Left operand
-        operands.push_back(matches[3].str()); // Right operand
+        operands.push_back(tr(matches[1].str())); // Left operand
+        operands.push_back(tr(matches[3].str())); // Right operand
     }
 
     return operands;
+}
+
+
+
+std::string InputFeatureDetector::extractBetweenParentheses(const std::string& str) {
+    size_t open = str.find_first_of('(');
+    size_t close = str.find_last_of(')');
+
+    if (open == std::string::npos || close == std::string::npos || close < open) {
+        return "";  // Invalid input or no parentheses
+    }
+
+    return str.substr(open + 1, close - open - 1);
 }
 
 // this registers the branch-pointer-tracer pass with the LLVM

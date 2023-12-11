@@ -74,6 +74,10 @@ namespace {
             std::string extractVariableName(const std::string& line);
 
             std::vector<std::string> parseCondition(const std::string& str);
+
+            std::string extractBetweenParentheses(const std::string& str);
+
+            std::string tr(const std::string& str);
         };
 
 }  
