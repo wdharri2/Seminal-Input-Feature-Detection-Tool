@@ -85,3 +85,7 @@ Run the script start.sh for the tool to run cohesively
 
 for example, to run the profiling and analysis tool on example.c in the test directory:
     `./start.sh tests/example.c`
+
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for more information.
