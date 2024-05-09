@@ -1,4 +1,0 @@
-br_0: branch.c, 9, 10
-br_1: branch.c, 9, 12
-br_2: branch.c, 12, 13
-br_3: branch.c, 12, 15
